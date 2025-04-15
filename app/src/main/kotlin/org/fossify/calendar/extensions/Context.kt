@@ -49,6 +49,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.Calendar
 import kotlin.math.roundToInt
+import kotlin.math.abs
 
 val Context.config: Config get() = Config.newInstance(applicationContext)
 val Context.eventsDB: EventsDao get() = EventsDatabase.getInstance(applicationContext).EventsDao()
@@ -107,7 +108,7 @@ fun Context.scheduleAllEvents() {
 }
 
 fun Context.scheduleNextEventReminder(event: Event, showToasts: Boolean) {
-    val validReminders = event.getReminders().filter { it.type == REMINDER_NOTIFICATION }
+    val validReminders = event.getReminders().filter { it.isNotification() }
     if (validReminders.isEmpty()) {
         if (showToasts) {
             toast(org.fossify.commons.R.string.saving)
@@ -312,13 +313,12 @@ fun Context.notifyEvent(originalEvent: Event) {
     val currentSeconds = getNowSeconds()
 
     var eventStartTS = if (event.getIsAllDay()) Formatter.getDayStartTS(Formatter.getDayCodeFromTS(event.startTS)) else event.startTS
+    val firstReminderMinutes = event.getReminders().map { it -> it.minutes }.max()
     // make sure refer to the proper repeatable event instance with "Tomorrow", or the specific date
-    if (event.repeatInterval != 0 && eventStartTS - event.reminder1Minutes * 60 < currentSeconds) {
+    if (event.repeatInterval != 0 && eventStartTS - firstReminderMinutes * 60 < currentSeconds) {
         val events = eventsHelper.getRepeatableEventsFor(currentSeconds - WEEK_SECONDS, currentSeconds + YEAR_SECONDS, event.id!!)
         for (currEvent in events) {
             eventStartTS = if (currEvent.getIsAllDay()) Formatter.getDayStartTS(Formatter.getDayCodeFromTS(currEvent.startTS)) else currEvent.startTS
-            val firstReminderMinutes =
-                arrayOf(currEvent.reminder3Minutes, currEvent.reminder2Minutes, currEvent.reminder1Minutes).filter { it != REMINDER_OFF }.max()
             if (eventStartTS - firstReminderMinutes * 60 > currentSeconds) {
                 break
             }
@@ -331,6 +331,7 @@ fun Context.notifyEvent(originalEvent: Event) {
     val startTime = Formatter.getTimeFromTS(applicationContext, event.startTS)
     val endTime = Formatter.getTimeFromTS(applicationContext, event.endTS)
     val startDate = Formatter.getDateFromTS(event.startTS)
+    val reminder = event.getReminders().minBy { it -> abs(eventStartTS - it.minutes * 60 - currentSeconds)  }
 
     val displayedStartDate = when (startDate) {
         LocalDate.now() -> ""
@@ -347,6 +348,9 @@ fun Context.notifyEvent(originalEvent: Event) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         try {
             if (notification != null) {
+                if (reminder.type == REMINDER_ALARM) {
+                    notification.flags = notification.flags or Notification.FLAG_INSISTENT
+                }
                 notificationManager.notify(event.id!!.toInt(), notification)
             }
         } catch (e: Exception) {

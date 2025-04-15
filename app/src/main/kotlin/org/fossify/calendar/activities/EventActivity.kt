@@ -955,8 +955,11 @@ class EventActivity : SimpleActivity() {
     private fun showReminderTypePicker(currentValue: Int, callback: (Int) -> Unit) {
         val items = arrayListOf(
             RadioItem(REMINDER_NOTIFICATION, getString(org.fossify.commons.R.string.notification)),
-            RadioItem(REMINDER_EMAIL, getString(org.fossify.commons.R.string.email))
+            RadioItem(REMINDER_ALARM, getString(org.fossify.commons.R.string.alarm))
         )
+        if (mEventCalendarId != STORED_LOCALLY_ONLY) {
+            items.add(RadioItem(REMINDER_EMAIL, getString(org.fossify.commons.R.string.email)))
+        }
         RadioGroupDialog(this, items, currentValue) {
             callback(it as Int)
         }
@@ -1000,11 +1003,11 @@ class EventActivity : SimpleActivity() {
     }
 
     private fun updateReminderTypeImage(view: ImageView, reminder: Reminder) {
-        view.beVisibleIf(reminder.minutes != REMINDER_OFF && mEventCalendarId != STORED_LOCALLY_ONLY)
-        val drawable = if (reminder.type == REMINDER_NOTIFICATION) {
-            org.fossify.commons.R.drawable.ic_bell_vector
-        } else {
-            org.fossify.commons.R.drawable.ic_mail_vector
+        view.beVisibleIf(reminder.minutes != REMINDER_OFF)
+        val drawable = when (reminder.type) {
+            REMINDER_EMAIL -> org.fossify.commons.R.drawable.ic_mail_vector
+            REMINDER_ALARM ->org.fossify.commons.R.drawable.ic_snooze_vector
+            else -> org.fossify.commons.R.drawable.ic_bell_vector
         }
 
         val icon = resources.getColoredDrawableWithColor(drawable, getProperTextColor())
@@ -1322,9 +1325,15 @@ class EventActivity : SimpleActivity() {
         val reminder2 = reminders.getOrNull(1) ?: Reminder(REMINDER_OFF, REMINDER_NOTIFICATION)
         val reminder3 = reminders.getOrNull(2) ?: Reminder(REMINDER_OFF, REMINDER_NOTIFICATION)
 
-        mReminder1Type = if (mEventCalendarId == STORED_LOCALLY_ONLY) REMINDER_NOTIFICATION else reminder1.type
-        mReminder2Type = if (mEventCalendarId == STORED_LOCALLY_ONLY) REMINDER_NOTIFICATION else reminder2.type
-        mReminder3Type = if (mEventCalendarId == STORED_LOCALLY_ONLY) REMINDER_NOTIFICATION else reminder3.type
+        if (mEventCalendarId == STORED_LOCALLY_ONLY) {
+            mReminder1Type = if (!reminder1.isNotification()) REMINDER_NOTIFICATION else reminder1.type
+            mReminder2Type = if (!reminder2.isNotification()) REMINDER_NOTIFICATION else reminder2.type
+            mReminder3Type = if (!reminder3.isNotification()) REMINDER_NOTIFICATION else reminder3.type
+        } else {
+            mReminder1Type = reminder1.type
+            mReminder2Type = reminder2.type
+            mReminder3Type = reminder3.type
+        }
 
         config.apply {
             if (usePreviousEventReminders) {

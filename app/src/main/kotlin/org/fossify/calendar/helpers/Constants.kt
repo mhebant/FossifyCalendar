@@ -257,6 +257,7 @@ const val EDIT_ALL_OCCURRENCES = 2
 
 const val REMINDER_NOTIFICATION = 0
 const val REMINDER_EMAIL = 1
+const val REMINDER_ALARM = 2
 
 const val EVENT = "EVENT"
 const val TASK = "TASK"
