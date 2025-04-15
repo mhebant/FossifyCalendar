@@ -10,7 +10,6 @@ import org.fossify.calendar.extensions.scheduleNextEventReminder
 import org.fossify.calendar.extensions.updateListWidget
 import org.fossify.calendar.helpers.EVENT_ID
 import org.fossify.calendar.helpers.Formatter
-import org.fossify.calendar.helpers.REMINDER_NOTIFICATION
 import org.fossify.commons.helpers.ensureBackgroundThread
 
 class NotificationReceiver : BroadcastReceiver() {
@@ -32,7 +31,7 @@ class NotificationReceiver : BroadcastReceiver() {
 
         context.updateListWidget()
         val event = context.eventsDB.getEventOrTaskWithId(id)
-        if (event == null || event.getReminders().none { it.type == REMINDER_NOTIFICATION } || event.repetitionExceptions.contains(Formatter.getTodayCode())) {
+        if (event == null || event.getReminders().none { it.isNotification() } || event.repetitionExceptions.contains(Formatter.getTodayCode())) {
             return
         }
 
